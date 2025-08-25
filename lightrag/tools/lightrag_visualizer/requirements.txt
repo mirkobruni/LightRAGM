@@ -1,8 +1,28 @@
-imgui_bundle
-moderngl
+# LightRAG dependencies
+nano-vectordb
 networkx
-numpy
-pyglm
-python-louvain
+graspologic
+tenacity
+pydantic
+xxhash
+tiktoken
 scipy
-tk
+fastapi
+uvicorn
+
+# RAG-Anything dependencies
+torch
+torchvision
+transformers
+sentence-transformers
+opencv-python-headless
+pillow
+numpy
+pandas
+clip-interrogator
+pytesseract
+
+# API dependencies
+flask
+requests
+python-dotenv
