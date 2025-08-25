@@ -1,100 +1,62 @@
 #!/usr/bin/env python3
-import sys
 import os
-import json
-from flask import Flask, jsonify, request
+import sys
+import subprocess
 
-# Aggiungi i percorsi
-sys.path.append("/app/lightrag")
-sys.path.append("/app/rag-anything")
+# Imposta le variabili d'ambiente necessarie
+os.environ['LIGHTRAG_WORKING_DIR'] = '/app/data'
+os.environ['LIGHTRAG_LOG_DIR'] = '/app/logs'
 
-# Configurazione directory
-WORKING_DIR = "/app/data"
-if not os.path.exists(WORKING_DIR):
-    os.makedirs(WORKING_DIR)
+# Crea le directory necessarie
+os.makedirs('/app/data', exist_ok=True)
+os.makedirs('/app/logs', exist_ok=True)
 
-# Inizializza Flask
-app = Flask(__name__)
+# Verifica se la chiave OpenAI è configurata
+if not os.environ.get('OPENAI_API_KEY'):
+    print("⚠️  ATTENZIONE: OPENAI_API_KEY non configurata!")
+    print("Aggiungi la variabile OPENAI_API_KEY nelle impostazioni Railway")
+    print("Il server partirà comunque ma le query non funzioneranno senza la chiave API")
+    print("-" * 50)
 
-# Variabile globale per LightRAG
-rag = None
+# Avvia il server LightRAG nativo
+print("=" * 50)
+print("🚀 Avvio LightRAG Server Nativo")
+print("=" * 50)
+print(f"📁 Working Directory: /app/data")
+print(f"📝 Log Directory: /app/logs")
+print(f"🌐 Server in ascolto su porta 9621")
+print("=" * 50)
 
-def init_lightrag():
-    global rag
-    if rag is None:
-        try:
-            from lightrag import LightRAG
-            from lightrag.llm import gpt_4o_mini_complete
-            
-            rag = LightRAG(
-                working_dir=WORKING_DIR,
-                llm_model_func=gpt_4o_mini_complete
-            )
-            print("LightRAG inizializzato con successo!")
-            return True
-        except Exception as e:
-            print(f"Errore inizializzazione LightRAG: {e}")
-            return False
-    return True
+# Cambia directory a lightrag
+os.chdir('/app/lightrag')
 
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({
-        "status": "LightRAG + RAG-Anything Server Attivo",
-        "version": "1.0",
-        "endpoints": {
-            "/": "Status del server",
-            "/query": "POST - Esegui query",
-            "/insert": "POST - Inserisci testo",
-            "/health": "GET - Health check"
-        }
-    })
+# Avvia il server usando il modulo Python
+sys.argv = [
+    'lightrag-server',
+    '--host', '0.0.0.0',
+    '--port', '9621',
+    '--llm-binding', 'openai',
+    '--llm-model', 'gpt-4o-mini',
+    '--embedding-binding', 'openai',
+    '--embedding-model', 'text-embedding-3-small'
+]
 
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "healthy"}), 200
-
-@app.route("/query", methods=["POST"])
-def query():
-    if not init_lightrag():
-        return jsonify({"error": "LightRAG non inizializzato"}), 500
-    
-    try:
-        data = request.json
-        query_text = data.get("query", "")
-        mode = data.get("mode", "hybrid")
-        
-        from lightrag import QueryParam
-        param = QueryParam(mode=mode)
-        result = rag.query(query_text, param=param)
-        
-        return jsonify({"result": result, "status": "success"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/insert", methods=["POST"])
-def insert():
-    if not init_lightrag():
-        return jsonify({"error": "LightRAG non inizializzato"}), 500
-    
-    try:
-        data = request.json
-        text = data.get("text", "")
-        
-        if not text:
-            return jsonify({"error": "Nessun testo fornito"}), 400
-        
-        rag.insert(text)
-        return jsonify({"status": "success", "message": "Testo inserito correttamente"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-if __name__ == "__main__":
-    print("=" * 50)
-    print("LightRAG + RAG-Anything Server")
-    print("=" * 50)
-    print(f"Working directory: {WORKING_DIR}")
-    print(f"Avvio server su porta 9621...")
+# Importa e avvia il server
+try:
+    from lightrag.api import lightrag_server
+    lightrag_server.main()
+except ImportError:
+    # Se il modulo non è disponibile, prova con subprocess
+    print("Tentativo alternativo di avvio server...")
+    subprocess.run([
+        sys.executable, '-m', 'lightrag.api.lightrag_server',
+        '--host', '0.0.0.0',
+        '--port', '9621',
+        '--llm-binding', 'openai',
+        '--llm-model', 'gpt-4o-mini',
+        '--embedding-binding', 'openai',
+        '--embedding-model', 'text-embedding-3-small'
+    ])
     print("=" * 50)
     
     # Avvia il server Flask
