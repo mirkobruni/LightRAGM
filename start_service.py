@@ -30,34 +30,15 @@ print("=" * 50)
 # Cambia directory a lightrag
 os.chdir('/app/lightrag')
 
-# Avvia il server usando il modulo Python
-sys.argv = [
-    'lightrag-server',
+# Avvia il server usando subprocess (metodo più affidabile)
+subprocess.run([
+    sys.executable, '-m', 'lightrag.api.lightrag_server',
     '--host', '0.0.0.0',
     '--port', '9621',
     '--llm-binding', 'openai',
     '--llm-model', 'gpt-4o-mini',
     '--embedding-binding', 'openai',
-    '--embedding-model', 'text-embedding-3-small'
-]
-
-# Importa e avvia il server
-try:
-    from lightrag.api import lightrag_server
-    lightrag_server.main()
-except ImportError:
-    # Se il modulo non è disponibile, prova con subprocess
-    print("Tentativo alternativo di avvio server...")
-    subprocess.run([
-        sys.executable, '-m', 'lightrag.api.lightrag_server',
-        '--host', '0.0.0.0',
-        '--port', '9621',
-        '--llm-binding', 'openai',
-        '--llm-model', 'gpt-4o-mini',
-        '--embedding-binding', 'openai',
-        '--embedding-model', 'text-embedding-3-small'
-    ])
-    print("=" * 50)
-    
-    # Avvia il server Flask
-    app.run(host="0.0.0.0", port=9621, debug=False)
+    '--embedding-model', 'text-embedding-3-small',
+    '--working-dir', '/app/data',
+    '--input-dir', '/app/data/inputs'
+])
